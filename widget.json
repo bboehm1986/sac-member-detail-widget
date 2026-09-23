@@ -1,0 +1,51 @@
+{
+    "id": "com.porticobenefits.memberdetail",
+    "name": "AE Member Enrollment Detail",
+    "version": "1.0.0",
+    "vendor": "Portico Benefits",
+    "license": "",
+    "eula": "",
+    "description": "Per-member Annual Enrollment detail. Meant to sit beside a native SAC Input Control (bound to Member via Linked Analysis): with no member selected, shows a needs-attention list sorted by completion status; with one selected, shows a full detail card. Reads GLD_AE_Member_Enrollment directly (row-level, PII-bearing) -- a deliberate exception to the rest of this suite's aggregate-cube-only binding rule, confirmed by Blair 2026-09-22.",
+    "newInstancePrefix": "MemberDetail",
+    "icon": "https://bboehm1986.github.io/sac-member-detail-widget/icon.svg",
+    "webcomponents": [
+        {
+            "kind": "main",
+            "tag": "com-porticobenefits-memberdetail",
+            "url": "https://bboehm1986.github.io/sac-member-detail-widget/main.js",
+            "integrity": ""
+        }
+    ],
+    "properties": {
+        "width": {
+            "type": "integer",
+            "default": 900
+        },
+        "height": {
+            "type": "integer",
+            "default": 480
+        }
+    },
+    "dataBindings": {
+        "memberDetail": {
+            "feeds": [
+                {
+                    "id": "dimensions",
+                    "description": "Member / Wave / Enrollment_Status / Defaulted / Defaulted_Timing / Membership_Type / Member_Health_Coverage / Vision_Plan / Set_Up_Date / Completed_Date / Abandoned_Date, from GLD_AE_Member_Enrollment directly (row-level, PII-bearing -- NOT the _NoID view the other two widgets in this suite use). Bind this widget's model, then filter it via a native Input Control on Member (Tools -> Link Dimensions) -- no selection shows a needs-attention list, one selection shows a full detail card.",
+                    "type": "dimension"
+                },
+                {
+                    "id": "measures",
+                    "description": "Total_Attempts, HSA_Election_Amount, FSA_Health_Election_Amount, FSA_Dependent_Election_Amount, SuppLife_Member_Amount, SuppLife_Spouse_Amount, SuppLife_Dependent_Amount, Retirement_Pretax_Amount, Retirement_Roth_Amount -- in that exact order",
+                    "type": "mainStructureMember"
+                }
+            ]
+        }
+    },
+    "methods": {
+        "refresh": {
+            "description": "Re-renders the widget from the currently bound data"
+        }
+    },
+    "events": {}
+}
