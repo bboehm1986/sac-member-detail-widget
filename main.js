@@ -45,6 +45,11 @@
             dimensions_8  = Set_Up_Date
             dimensions_9  = Completed_Date
             dimensions_10 = Abandoned_Date
+            dimensions_11 = Is_Portico_Employee ("Yes"/"No" -- added
+                             2026-10-01 per Blair; rows where this is "Yes"
+                             are EXCLUDED entirely, see _render() below. The
+                             mirror widget showing ONLY Portico employees is
+                             sac-member-detail-portico-widget.)
             measures_0    = Total_Attempts
             measures_1    = HSA_Election_Amount
             measures_2    = FSA_Health_Election_Amount
@@ -87,20 +92,22 @@
     }
 
     // Multi-row mock — the unfiltered "needs attention" default state.
+    // Last dim is Is_Portico_Employee -- all "No" here, this widget's
+    // mock population is the general (non-Portico) member base.
     const MOCK_MEMBER_LIST = { data: [
-        row(["9996795", "Wave 3", "Not Started", "No", "N/A", "Other", "", "", "", "", ""], [0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        row(["5750789", "Wave 2b", "Not Started", "No", "N/A", "Retired", "", "", "", "", ""], [0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        row(["1842687", "Wave 1", "In Progress", "No", "N/A", "Sponsored", "", "", "2026-10-19", "", ""], [2, 500, 0, 0, 0, 0, 0, 0, 0]),
-        row(["9513394", "Wave 2a", "Needs Follow-up", "No", "N/A", "Sponsored", "", "", "2026-11-09", "", ""], [3, 0, 0, 0, 10, 0, 0, 0, 0]),
-        row(["2766505", "Wave 1", "Abandoned", "Yes", "Before PSP", "Retired", "waived", "", "2026-10-19", "", "2026-10-30"], [1, 0, 0, 0, 0, 0, 0, 0, 0]),
-        row(["2794088", "Wave 1", "Abandoned", "Yes", "After PSP", "Sponsored", "waived", "", "2026-10-19", "", "2026-11-04"], [2, 0, 0, 0, 0, 0, 0, 0, 0]),
-        row(["3832321", "Wave 2a", "Success", "No", "N/A", "Other", "silver", "silver", "2026-11-09", "2026-11-12", ""], [1, 500, 250, 0, 0, 0, 0, 88, 0]),
-        row(["8033811", "Wave 2b", "Success", "No", "N/A", "Sponsored", "gold", "gold", "2026-11-09", "2026-11-15", ""], [1, 1000, 0, 0, 20, 10, 0, 0, 145]),
+        row(["9996795", "Wave 3", "Not Started", "No", "N/A", "Other", "", "", "", "", "", "No"], [0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        row(["5750789", "Wave 2b", "Not Started", "No", "N/A", "Retired", "", "", "", "", "", "No"], [0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        row(["1842687", "Wave 1", "In Progress", "No", "N/A", "Sponsored", "", "", "2026-10-19", "", "", "No"], [2, 500, 0, 0, 0, 0, 0, 0, 0]),
+        row(["9513394", "Wave 2a", "Needs Follow-up", "No", "N/A", "Sponsored", "", "", "2026-11-09", "", "", "No"], [3, 0, 0, 0, 10, 0, 0, 0, 0]),
+        row(["2766505", "Wave 1", "Abandoned", "Yes", "Before PSP", "Retired", "waived", "", "2026-10-19", "", "2026-10-30", "No"], [1, 0, 0, 0, 0, 0, 0, 0, 0]),
+        row(["2794088", "Wave 1", "Abandoned", "Yes", "After PSP", "Sponsored", "waived", "", "2026-10-19", "", "2026-11-04", "No"], [2, 0, 0, 0, 0, 0, 0, 0, 0]),
+        row(["3832321", "Wave 2a", "Success", "No", "N/A", "Other", "silver", "silver", "2026-11-09", "2026-11-12", "", "No"], [1, 500, 250, 0, 0, 0, 0, 88, 0]),
+        row(["8033811", "Wave 2b", "Success", "No", "N/A", "Sponsored", "gold", "gold", "2026-11-09", "2026-11-15", "", "No"], [1, 1000, 0, 0, 20, 10, 0, 0, 145]),
     ] };
 
     // Single-row mock — one member selected via the Input Control.
     const MOCK_MEMBER_SELECTED = { data: [
-        row(["1842687", "Wave 1", "Success", "No", "N/A", "Sponsored", "silver", "silver", "2026-10-19", "2026-10-24", ""], [2, 500, 250, 0, 25, 0, 0, 88, 0]),
+        row(["1842687", "Wave 1", "Success", "No", "N/A", "Sponsored", "silver", "silver", "2026-10-19", "2026-10-24", "", "No"], [2, 500, 250, 0, 25, 0, 0, 88, 0]),
     ] };
 
     const template = document.createElement("template");
@@ -274,6 +281,7 @@
                 suppLifeDependentAmount: this._measure(r, 6),
                 retirementPretaxAmount: this._measure(r, 7),
                 retirementRothAmount: this._measure(r, 8),
+                isPorticoEmployee: this._dim(r, 11),
             };
         }
 
@@ -356,7 +364,10 @@
             dataBadgeEl.hidden = !this._usingMockData;
 
             const rawRows = (this._memberDetail && this._memberDetail.data) || [];
-            const rows = rawRows.map((r) => this._parseRow(r));
+            // Excludes Portico's own employees -- added 2026-10-01 per
+            // Blair. sac-member-detail-portico-widget is the mirror
+            // showing ONLY them, same model, opposite filter.
+            const rows = rawRows.map((r) => this._parseRow(r)).filter((m) => m.isPorticoEmployee !== "Yes");
             const bodyEl = root.getElementById("body");
 
             if (rows.length === 1) {
