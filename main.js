@@ -50,6 +50,11 @@
                              are EXCLUDED entirely, see _render() below. The
                              mirror widget showing ONLY Portico employees is
                              sac-member-detail-portico-widget.)
+            dimensions_12 = EventDate (added 2026-10-03 per Blair -- the
+                             enrollment cycle a row belongs to: 2027-01-01 =
+                             this cycle, 2026-01-01 = prior. A selected
+                             member can now arrive as 2 rows, one per cycle;
+                             the detail card shows them side by side.)
             measures_0    = Total_Attempts
             measures_1    = HSA_Election_Amount
             measures_2    = FSA_Health_Election_Amount
@@ -60,14 +65,16 @@
             measures_7    = Retirement_Pretax_Amount
             measures_8    = Retirement_Roth_Amount
 
-    Two render states, decided purely by how many rows arrive:
-      - No Input Control selection -> many rows -> "needs attention" list,
-        sorted client-side (least-complete Enrollment_Status first, same
-        STATUS_PRIORITY convention as the Employer drill-down). Capped to
-        a readable number of rows; a caption points at the Input Control
-        for the full detail card.
-      - One member selected        -> exactly one row -> a full detail
-        card (status, dates, election detail).
+    Two render states, decided by how many DISTINCT MEMBERS arrive (not
+    rows -- one member can now have a row per cycle):
+      - No Input Control selection -> many members -> "needs attention"
+        list of CURRENT-cycle rows only, sorted client-side (least-complete
+        Enrollment_Status first, same STATUS_PRIORITY convention as the
+        Employer drill-down). Capped to a readable number of rows; a
+        caption points at the Input Control for the full detail card.
+      - One member selected        -> one distinct member -> a full detail
+        card with Prior Cycle and This Cycle columns side by side (status,
+        dates, election detail); values that changed are highlighted.
 
     Until wired to the real Datasphere-backed model, the widget renders
     from the MOCK_* constants below (see preview.html) — one mock set for
@@ -84,6 +91,19 @@
     const STATUS_LABELS = { "Success": "Completed", "Abandoned": "Started, Not Completed", "Not Started": "Not Started", "In Progress": "In Progress", "Needs Follow-up": "Needs Follow-up" };
     const MAX_LIST_ROWS = 25;
 
+    // EventDate years that identify the two cycles -- same hardcoded-
+    // literal, annual-maintenance pattern as the cube's EventDate literals
+    // ('2027-01-01' = this cycle, '2026-01-01' = prior). Bump each cycle.
+    const CURRENT_EVENT_YEAR = 2027;
+    const PRIOR_EVENT_YEAR = 2026;
+
+    // EventDate can arrive as ISO (mock) or a SAC locale label ("Jan 1,
+    // 2027") -- only the year is needed, so avoid Date parsing quirks.
+    function eventYear(str) {
+        const m = /(\d{4})/.exec(str || "");
+        return m ? Number(m[1]) : 0;
+    }
+
     function row(dims, measures) {
         const out = {};
         dims.forEach((d, i) => { out["dimensions_" + i] = { id: d, label: d }; });
@@ -95,19 +115,25 @@
     // Last dim is Is_Portico_Employee -- all "No" here, this widget's
     // mock population is the general (non-Portico) member base.
     const MOCK_MEMBER_LIST = { data: [
-        row(["9996795", "Wave 3", "Not Started", "No", "N/A", "Other", "", "", "", "", "", "No"], [0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        row(["5750789", "Wave 2b", "Not Started", "No", "N/A", "Retired", "", "", "", "", "", "No"], [0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        row(["1842687", "Wave 1", "In Progress", "No", "N/A", "Sponsored", "", "", "2026-10-19", "", "", "No"], [2, 500, 0, 0, 0, 0, 0, 0, 0]),
-        row(["9513394", "Wave 2a", "Needs Follow-up", "No", "N/A", "Sponsored", "", "", "2026-11-09", "", "", "No"], [3, 0, 0, 0, 10, 0, 0, 0, 0]),
-        row(["2766505", "Wave 1", "Abandoned", "Yes", "Before PSP", "Retired", "waived", "", "2026-10-19", "", "2026-10-30", "No"], [1, 0, 0, 0, 0, 0, 0, 0, 0]),
-        row(["2794088", "Wave 1", "Abandoned", "Yes", "After PSP", "Sponsored", "waived", "", "2026-10-19", "", "2026-11-04", "No"], [2, 0, 0, 0, 0, 0, 0, 0, 0]),
-        row(["3832321", "Wave 2a", "Success", "No", "N/A", "Other", "silver", "silver", "2026-11-09", "2026-11-12", "", "No"], [1, 500, 250, 0, 0, 0, 0, 88, 0]),
-        row(["8033811", "Wave 2b", "Success", "No", "N/A", "Sponsored", "gold", "gold", "2026-11-09", "2026-11-15", "", "No"], [1, 1000, 0, 0, 20, 10, 0, 0, 145]),
+        row(["9996795", "Wave 3", "Not Started", "No", "N/A", "Other", "", "", "", "", "", "No", "2027-01-01"], [0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        row(["5750789", "Wave 2b", "Not Started", "No", "N/A", "Retired", "", "", "", "", "", "No", "2027-01-01"], [0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        row(["1842687", "Wave 1", "In Progress", "No", "N/A", "Sponsored", "", "", "2026-10-19", "", "", "No", "2027-01-01"], [2, 500, 0, 0, 0, 0, 0, 0, 0]),
+        row(["9513394", "Wave 2a", "Needs Follow-up", "No", "N/A", "Sponsored", "", "", "2026-11-09", "", "", "No", "2027-01-01"], [3, 0, 0, 0, 10, 0, 0, 0, 0]),
+        row(["2766505", "Wave 1", "Abandoned", "Yes", "Before PSP", "Retired", "waived", "", "2026-10-19", "", "2026-10-30", "No", "2027-01-01"], [1, 0, 0, 0, 0, 0, 0, 0, 0]),
+        row(["2794088", "Wave 1", "Abandoned", "Yes", "After PSP", "Sponsored", "waived", "", "2026-10-19", "", "2026-11-04", "No", "2027-01-01"], [2, 0, 0, 0, 0, 0, 0, 0, 0]),
+        row(["3832321", "Wave 2a", "Success", "No", "N/A", "Other", "silver", "silver", "2026-11-09", "2026-11-12", "", "No", "2027-01-01"], [1, 500, 250, 0, 0, 0, 0, 88, 0]),
+        row(["8033811", "Wave 2b", "Success", "No", "N/A", "Sponsored", "gold", "gold", "2026-11-09", "2026-11-15", "", "No", "2027-01-01"], [1, 1000, 0, 0, 20, 10, 0, 0, 145]),
+        // Prior-cycle rows for members above -- must NOT appear in the list.
+        row(["1842687", "Wave 1", "Success", "No", "N/A", "Sponsored", "bronze", "basic", "2025-10-19", "2025-10-22", "", "No", "2026-01-01"], [1, 400, 250, 0, 25, 0, 0, 60, 0]),
+        row(["3832321", "Wave 2a", "Success", "No", "N/A", "Other", "silver", "silver", "2025-11-09", "2025-11-14", "", "No", "2026-01-01"], [1, 500, 250, 0, 0, 0, 0, 88, 0]),
     ] };
 
-    // Single-row mock — one member selected via the Input Control.
+    // One member selected via the Input Control -- two rows, one per cycle.
+    // Prior cycle differs from this cycle (HSA up, health plan changed,
+    // Supp Life added) to exercise the changed-value highlighting.
     const MOCK_MEMBER_SELECTED = { data: [
-        row(["1842687", "Wave 1", "Success", "No", "N/A", "Sponsored", "silver", "silver", "2026-10-19", "2026-10-24", "", "No"], [2, 500, 250, 0, 25, 0, 0, 88, 0]),
+        row(["1842687", "Wave 1", "Success", "No", "N/A", "Sponsored", "silver", "silver", "2026-10-19", "2026-10-24", "", "No", "2027-01-01"], [2, 500, 250, 0, 25, 0, 0, 88, 0]),
+        row(["1842687", "Wave 1", "Success", "No", "N/A", "Sponsored", "bronze", "basic", "2025-10-19", "2025-10-22", "", "No", "2026-01-01"], [1, 400, 250, 0, 0, 0, 0, 88, 0]),
     ] };
 
     const template = document.createElement("template");
@@ -184,6 +210,9 @@
             .detail-table tbody td { text-align: right; font-variant-numeric: tabular-nums; }
             .detail-table tbody th { font-weight: 600; color: var(--text); white-space: nowrap; }
             .detail-table tbody tr:last-child td, .detail-table tbody tr:last-child th { border-bottom: none; }
+            .detail-table thead th.colhead { text-align: right; font-size: 10px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.05em; }
+            .detail-table tbody td.prior { color: var(--text-soft); }
+            .detail-table tbody td.chg { color: var(--accent); font-weight: 700; }
             .detail-table .section-row th { padding-top: 14px; font-size: 9.5px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: none; }
 
             /* ---- Needs-attention default list ---- */
@@ -282,6 +311,7 @@
                 retirementPretaxAmount: this._measure(r, 7),
                 retirementRothAmount: this._measure(r, 8),
                 isPorticoEmployee: this._dim(r, 11),
+                eventYear: eventYear(this._dim(r, 12)),
             };
         }
 
@@ -302,39 +332,53 @@
         }
 
         // ---- Selected-member detail card ----
-        _detailCardHtml(m) {
-            const rows = [
+        // cur = this cycle's row, prior = prior cycle's row; either can be
+        // missing (a member new this year has no prior; a member only in
+        // last year's data has no current). Missing side renders as "—".
+        _detailCardHtml(cur, prior) {
+            const fields = [
                 { section: "Status" },
-                { label: "Set Up Date", v: m.setUpDate || "—" },
-                { label: "Completed Date", v: m.completedDate || "—" },
-                { label: "Abandoned Date", v: m.abandonedDate || "—" },
-                { label: "Total Attempts", v: m.totalAttempts.toLocaleString() },
-                { label: "Defaulted", v: m.defaulted === "Yes" ? "Yes — " + (m.defaultedTiming || "N/A") : "No" },
-                { section: "Elections" },
-                { label: "Health Coverage", v: m.healthCoverage || "—" },
-                { label: "Vision", v: m.visionPlan || "—" },
-                { label: "HSA", v: this._money(m.hsaAmount) },
-                { label: "FSA — Health", v: this._money(m.fsaHealthAmount) },
-                { label: "FSA — Dependent", v: this._money(m.fsaDependentAmount) },
-                { label: "Supp Life — Member", v: this._money(m.suppLifeMemberAmount) },
-                { label: "Supp Life — Spouse", v: this._money(m.suppLifeSpouseAmount) },
-                { label: "Supp Life — Dependent", v: this._money(m.suppLifeDependentAmount) },
-                { label: "Retirement — Pretax", v: this._money(m.retirementPretaxAmount) },
-                { label: "Retirement — Roth", v: this._money(m.retirementRothAmount) },
+                { label: "Set Up Date", f: (m) => m.setUpDate || "—" },
+                { label: "Completed Date", f: (m) => m.completedDate || "—" },
+                { label: "Abandoned Date", f: (m) => m.abandonedDate || "—" },
+                { label: "Total Attempts", f: (m) => m.totalAttempts.toLocaleString() },
+                { label: "Defaulted", f: (m) => m.defaulted === "Yes" ? "Yes — " + (m.defaultedTiming || "N/A") : "No" },
+                { section: "Elections", compare: true },
+                { label: "Health Coverage", f: (m) => m.healthCoverage || "—", compare: true },
+                { label: "Vision", f: (m) => m.visionPlan || "—", compare: true },
+                { label: "HSA", f: (m) => this._money(m.hsaAmount), compare: true },
+                { label: "FSA — Health", f: (m) => this._money(m.fsaHealthAmount), compare: true },
+                { label: "FSA — Dependent", f: (m) => this._money(m.fsaDependentAmount), compare: true },
+                { label: "Supp Life — Member", f: (m) => this._money(m.suppLifeMemberAmount), compare: true },
+                { label: "Supp Life — Spouse", f: (m) => this._money(m.suppLifeSpouseAmount), compare: true },
+                { label: "Supp Life — Dependent", f: (m) => this._money(m.suppLifeDependentAmount), compare: true },
+                { label: "Retirement — Pretax", f: (m) => this._money(m.retirementPretaxAmount), compare: true },
+                { label: "Retirement — Roth", f: (m) => this._money(m.retirementRothAmount), compare: true },
             ];
-            const bodyRows = rows.map((r) =>
-                r.section
-                    ? `<tr class="section-row"><th colspan="2" scope="colgroup">${r.section}</th></tr>`
-                    : `<tr><th scope="row">${r.label}</th><td>${r.v}</td></tr>`
-            ).join("");
+            // Highlight only election rows, and only when both cycles exist
+            // and the displayed values differ.
+            const bodyRows = fields.map((r) => {
+                if (r.section) return `<tr class="section-row"><th colspan="3" scope="colgroup">${r.section}</th></tr>`;
+                const p = prior ? r.f(prior) : "—";
+                const c = cur ? r.f(cur) : "—";
+                const changed = r.compare && prior && cur && p !== c;
+                return `<tr><th scope="row">${r.label}</th><td class="prior">${p}</td><td class="${changed ? "chg" : ""}">${c}</td></tr>`;
+            }).join("");
+            const head = cur || prior;
+            const note = !cur ? `<div class="member-sub">No current-cycle record for this member — showing prior cycle only.</div>`
+                : !prior ? `<div class="member-sub">No prior-cycle record for this member.</div>` : "";
             return `
                 <div class="member-head">
-                    <h2>Member ${m.member || "(Unknown)"}</h2>
-                    <span class="pill">${m.wave || "No Wave"}</span>
-                    <span class="pill ${this._statusPillClass(m.enrollmentStatus)}">${this._statusLabel(m.enrollmentStatus)}</span>
+                    <h2>Member ${head.member || "(Unknown)"}</h2>
+                    <span class="pill">${head.wave || "No Wave"}</span>
+                    <span class="pill ${this._statusPillClass(head.enrollmentStatus)}">${this._statusLabel(head.enrollmentStatus)}</span>
                 </div>
-                <div class="member-sub">${m.membershipType || "Membership type unknown"}</div>
-                <table class="detail-table"><tbody>${bodyRows}</tbody></table>`;
+                <div class="member-sub">${head.membershipType || "Membership type unknown"}</div>
+                ${note}
+                <table class="detail-table">
+                    <thead><tr><th></th><th class="colhead">Prior Cycle</th><th class="colhead">This Cycle</th></tr></thead>
+                    <tbody>${bodyRows}</tbody>
+                </table>`;
         }
 
         // ---- Needs-attention default list (no member selected) ----
@@ -367,11 +411,25 @@
             // Excludes Portico's own employees -- added 2026-10-01 per
             // Blair. sac-member-detail-portico-widget is the mirror
             // showing ONLY them, same model, opposite filter.
-            const rows = rawRows.map((r) => this._parseRow(r)).filter((m) => m.isPorticoEmployee !== "Yes");
+            const allRows = rawRows.map((r) => this._parseRow(r)).filter((m) => m.isPorticoEmployee !== "Yes");
             const bodyEl = root.getElementById("body");
 
-            if (rows.length === 1) {
-                bodyEl.innerHTML = this._detailCardHtml(rows[0]);
+            // One member selected (possibly 2 rows, one per cycle) -> card.
+            const distinctMembers = new Set(allRows.map((m) => m.member));
+            if (distinctMembers.size === 1) {
+                const cur = allRows.find((m) => m.eventYear === CURRENT_EVENT_YEAR);
+                const prior = allRows.find((m) => m.eventYear === PRIOR_EVENT_YEAR);
+                if (cur || prior) {
+                    bodyEl.innerHTML = this._detailCardHtml(cur, prior);
+                    return;
+                }
+            }
+
+            // Needs-attention list: current-cycle rows only, so a prior-
+            // cycle record never shows up as this year's status.
+            const rows = allRows.filter((m) => m.eventYear === CURRENT_EVENT_YEAR);
+            if (!rows.length && allRows.length) {
+                bodyEl.innerHTML = `<div class="empty-row">No current-cycle records for the current selection</div>`;
                 return;
             }
 

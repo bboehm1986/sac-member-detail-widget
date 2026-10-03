@@ -1,7 +1,7 @@
 {
     "id": "com.porticobenefits.memberdetail",
     "name": "AE Member Enrollment Detail",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "vendor": "Portico Benefits",
     "license": "",
     "eula": "",
@@ -13,7 +13,7 @@
             "kind": "main",
             "tag": "com-porticobenefits-memberdetail",
             "url": "https://bboehm1986.github.io/sac-member-detail-widget/main.js",
-            "integrity": "sha384-Ckz7lW7zjGqqukBM9XvraaZcpD2oG3scSnkpFf7xGFH1hqa+aC8yjPgc+UE/fDyn"
+            "integrity": "sha384-V//kbMyJyzaQOTAbfVTChleOR72SRuCoHgSFTOiZ9te07VzRoKua2Lytc9iovqK6"
         }
     ],
     "properties": {
@@ -31,7 +31,7 @@
             "feeds": [
                 {
                     "id": "dimensions",
-                    "description": "Member / Wave / Enrollment_Status / Defaulted / Defaulted_Timing / Membership_Type / Member_Health_Coverage / Vision_Plan / Set_Up_Date / Completed_Date / Abandoned_Date / Is_Portico_Employee, from GLD_AE_Member_Enrollment directly (row-level, PII-bearing -- NOT the _NoID view the other two widgets in this suite use). Is_Portico_Employee (added 2026-10-01) is used to EXCLUDE Portico's own employees from this widget entirely -- see sac-member-detail-portico-widget for the mirror widget showing ONLY them. Bind this widget's model, then filter it via a native Input Control on Member (Tools -> Link Dimensions) -- no selection shows a needs-attention list, one selection shows a full detail card.",
+                    "description": "13 dimensions in this exact order: Member / Wave / Enrollment_Status / Defaulted / Defaulted_Timing / Membership_Type / Member_Health_Coverage / Vision_Plan / Set_Up_Date / Completed_Date / Abandoned_Date / Is_Portico_Employee / EventDate (EventDate added 2026-10-03 as the LAST dimension so existing positions don't shift -- it identifies this cycle vs. prior cycle so the detail card can show prior-year elections alongside this year's), from GLD_AE_Member_Enrollment directly (row-level, PII-bearing -- NOT the _NoID view the other two widgets in this suite use). Is_Portico_Employee (added 2026-10-01) is used to EXCLUDE Portico's own employees from this widget entirely -- see sac-member-detail-portico-widget for the mirror widget showing ONLY them. Bind this widget's model, then filter it via a native Input Control on Member (Tools -> Link Dimensions) -- no selection shows a needs-attention list, one selection shows a full detail card.",
                     "type": "dimension"
                 },
                 {
