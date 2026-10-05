@@ -36,11 +36,14 @@ the bound model externally — the widget only ever reacts to
 `onCustomWidgetAfterUpdate` with whatever rows the current filter
 returns. This widget works the same way:
 
-- **No Input Control selection** → many rows arrive → a "needs
-  attention" list, sorted client-side (least-complete Enrollment Status
-  first).
+- **No Input Control selection** → many members arrive → a "needs
+  attention" list of CURRENT-cycle rows, sorted client-side
+  (least-complete Enrollment Status first).
 - **One member selected** (via a native Input Control bound to `Member`)
-  → exactly one row arrives → a full detail card.
+  → one distinct member arrives (as up to two rows, one per cycle) → a
+  full detail card with **Prior Cycle / This Cycle** columns; changed
+  election values are highlighted. The card/list decision counts distinct
+  MEMBERS, not rows — a member now has a row per cycle.
 
 ## Two lessons carried over from the start, same as the rest of this suite
 
@@ -70,36 +73,61 @@ returns. This widget works the same way:
 
 ## Data binding — what it expects
 
-- **`memberDetail`** ← `GLD_AE_Member_Enrollment` directly (row-level,
-  PII-bearing — see the exception noted above). 11 dimensions (Member,
-  Wave, Enrollment_Status, Defaulted, Defaulted_Timing, Membership_Type,
-  Member_Health_Coverage, Vision_Plan, Set_Up_Date, Completed_Date,
-  Abandoned_Date) and 9 measures (Total_Attempts, HSA/FSA ×2/Supp Life
-  ×3/Retirement ×2 election amounts).
+- **`memberDetail`** ← `AM_MEMBER_ENROLLMENT_DETAIL` (built on
+  `GLD_AE_Member_Enrollment` directly — row-level, PII-bearing — see the
+  exception noted above). SAC binds by POSITION, so add **Measures first,
+  then Dimensions, in exactly this order**:
+  - **9 measures:** Total_Attempts, HSA_Election_Amount,
+    FSA_Health_Election_Amount, FSA_Dependent_Election_Amount,
+    SuppLife_Member_Amount, SuppLife_Spouse_Amount,
+    SuppLife_Dependent_Amount, Retirement_Pretax_Amount,
+    Retirement_Roth_Amount.
+  - **13 dimensions:** Member, Wave, Enrollment_Status, Defaulted,
+    Defaulted_Timing, Membership_Type, Member_Health_Coverage, Vision_Plan,
+    Set_Up_Date, Completed_Date, Abandoned_Date, Is_Portico_Employee,
+    **EventDate (LAST)**.
+- **`EventDate` (added v1.2.0) must be the last dimension.** It marks
+  this cycle (`2027-01-01`) vs. prior (`2026-01-01`) by its YEAR; the
+  widget's `CURRENT_EVENT_YEAR` / `PRIOR_EVENT_YEAR` constants must be
+  bumped each cycle. If it isn't bound the widget does NOT go blank: it
+  shows all rows as before with a one-line notice asking for the binding.
+  Never put an Input Control or filter on `EventDate` — the comparison
+  needs both cycles' rows.
+- Portico's own employees (`Is_Portico_Employee = 'Yes'`) are excluded by
+  the widget AND by a story-level `Is_Portico_Employee = No` filter on
+  the main story. The HR-only dashboard for them is
+  [`sac-member-portico-widget`](../sac-member-portico-widget), a separate
+  story.
 
 ## Status of this build
 
-- ✅ Widget scaffold, layout, and both render states (list + detail
-  card) — done, verified locally against mock data (see `preview.html`'s
-  toggle button); no console errors.
-- ⏳ Not yet hosted on GitHub Pages or registered in SAC.
-- ⏳ Blocked on real data — `GLD_AE_Member_Enrollment` itself needs the
-  drafted Gold SQL in `BUILD_PLAN_FOR_AHMED.md` deployed first
-  (`Membership_Type`, `Member_Health_Coverage`, and the `AE_EventRqsts`
-  Wave/Defaulted join are all part of that same rebuild, not yet live).
-- ⏳ `Employer` and `Sponsored` (the generic Ahmed-owned placeholder, not
-  `Membership_Type`) are not bound here — not yet built in Gold at all.
+- ✅ Built, hosted on GitHub Pages, registered in SAC, bound, and
+  confirmed working against real (QA) data, including the prior-cycle
+  comparison (2026-10-05).
+- ✅ Native Input Controls on the Detail page: `Member` (the priority),
+  `Enrollment_Status`, `Member_Health_Coverage`, `Defaulted` — set up
+  2026-10-03; `Wave` later, once real Wave tags exist.
+- ⏳ `Membership_Type`, `Eligible_Count`, `Health_Covered_Count` are `NULL`
+  placeholders in Gold until BR-29 is fixed, so the card/list read
+  "Membership type unknown" / "Unknown type" today. Expected, not a bug.
+- ⏳ Prior-cycle data is sparse in QA (~81 rows), so most members show
+  "No prior-cycle record".
+- ⏳ `Employer` and `Sponsored` are not bound here — not built in Gold.
+- Known minor edge case: if the bound data contains no non-Portico rows
+  for the current selection, the empty-state text can read "EventDate is
+  not bound" even though it is (the check runs after the Portico filter).
+  Rare on this widget; fixed on the Portico widget in v1.1.2.
 
-## Next steps (once ready)
+## Changing it
 
-1. Host `main.js`/`icon.svg` on GitHub Pages, matching `widget.json`'s
-   hardcoded URLs (`bboehm1986.github.io/sac-member-detail-widget/...`).
-2. Register in SAC (System → Custom Widgets → Add Custom Widget).
-3. Deploy the drafted Gold SQL per `BUILD_PLAN_FOR_AHMED.md`, build a SAC
-   model directly on `GLD_AE_Member_Enrollment`, and bind `memberDetail`.
-4. Add a native SAC Input Control bound to `Member`, wired to the same
-   model via Linked Analysis (Tools → Link Dimensions) — this is what
-   actually drives list-vs-detail, not anything in this widget's own code.
-5. Confirm the access/sensitivity conversation implied by binding
-   row-level PII into a custom widget has actually happened, if it hasn't
-   already — see the exception note above.
+- Pushing a `main.js` change changes its hash, which breaks the live SAC
+  registration until `widget.json` is re-uploaded. Bump the version
+  (minor/patch only — a placed instance is locked to its major version),
+  recompute the integrity hash
+  (`openssl dgst -sha384 -binary main.js | openssl base64 -A`), and warn
+  before pushing.
+- GitHub Pages can sit "queued" for a long time; check
+  `api.github.com/repos/<owner>/<repo>/actions/runs` and confirm the
+  hosted `widget.json` shows the new version before re-uploading.
+- No caveat / "open items" banners on this or any widget (Blair's
+  standing decision, 2026-10-05).
