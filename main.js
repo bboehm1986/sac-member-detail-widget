@@ -335,7 +335,7 @@
         // cur = this cycle's row, prior = prior cycle's row; either can be
         // missing (a member new this year has no prior; a member only in
         // last year's data has no current). Missing side renders as "—".
-        _detailCardHtml(cur, prior) {
+        _detailCardHtml(cur, prior, cycleUnknown) {
             const fields = [
                 { section: "Status" },
                 { label: "Set Up Date", f: (m) => m.setUpDate || "—" },
@@ -365,7 +365,8 @@
                 return `<tr><th scope="row">${r.label}</th><td class="prior">${p}</td><td class="${changed ? "chg" : ""}">${c}</td></tr>`;
             }).join("");
             const head = cur || prior;
-            const note = !cur ? `<div class="member-sub">No current-cycle record for this member — showing prior cycle only.</div>`
+            const note = cycleUnknown ? ""
+                : !cur ? `<div class="member-sub">No current-cycle record for this member — showing prior cycle only.</div>`
                 : !prior ? `<div class="member-sub">No prior-cycle record for this member.</div>` : "";
             return `
                 <div class="member-head">
@@ -415,19 +416,25 @@
             const bodyEl = root.getElementById("body");
 
             // One member selected (possibly 2 rows, one per cycle) -> card.
+            // If EventDate isn't bound (no row carries a recognisable year),
+            // fall back to the pre-1.2.0 behaviour -- treat every row as
+            // current -- and say so, rather than going blank.
+            const eventDateBound = allRows.some((m) => m.eventYear > 0);
+            const unboundNote = eventDateBound ? "" : `<div class="empty-row">EventDate is not bound on this widget (add it as the last dimension) — showing all rows, prior-cycle comparison unavailable.</div>`;
+
             const distinctMembers = new Set(allRows.map((m) => m.member));
             if (distinctMembers.size === 1) {
-                const cur = allRows.find((m) => m.eventYear === CURRENT_EVENT_YEAR);
-                const prior = allRows.find((m) => m.eventYear === PRIOR_EVENT_YEAR);
+                const cur = eventDateBound ? allRows.find((m) => m.eventYear === CURRENT_EVENT_YEAR) : allRows[0];
+                const prior = eventDateBound ? allRows.find((m) => m.eventYear === PRIOR_EVENT_YEAR) : undefined;
                 if (cur || prior) {
-                    bodyEl.innerHTML = this._detailCardHtml(cur, prior);
+                    bodyEl.innerHTML = unboundNote + this._detailCardHtml(cur, prior, !eventDateBound);
                     return;
                 }
             }
 
             // Needs-attention list: current-cycle rows only, so a prior-
             // cycle record never shows up as this year's status.
-            const rows = allRows.filter((m) => m.eventYear === CURRENT_EVENT_YEAR);
+            const rows = eventDateBound ? allRows.filter((m) => m.eventYear === CURRENT_EVENT_YEAR) : allRows;
             if (!rows.length && allRows.length) {
                 bodyEl.innerHTML = `<div class="empty-row">No current-cycle records for the current selection</div>`;
                 return;
@@ -444,7 +451,7 @@
                 return (a.member || "").localeCompare(b.member || "");
             });
 
-            bodyEl.innerHTML = this._attentionListHtml(sorted);
+            bodyEl.innerHTML = unboundNote + this._attentionListHtml(sorted);
         }
     }
 
