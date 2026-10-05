@@ -412,7 +412,9 @@
             // Excludes Portico's own employees -- added 2026-10-01 per
             // Blair. sac-member-detail-portico-widget is the mirror
             // showing ONLY them, same model, opposite filter.
-            const allRows = rawRows.map((r) => this._parseRow(r)).filter((m) => m.isPorticoEmployee !== "Yes");
+            // FLEX members (Wave "Group A".."Group F") are excluded too
+            // (2026-10-05); they belong to sac-flex-member-widget.
+            const allRows = rawRows.map((r) => this._parseRow(r)).filter((m) => m.isPorticoEmployee !== "Yes" && !/^Group /.test(m.wave || ""));
             const bodyEl = root.getElementById("body");
 
             // One member selected (possibly 2 rows, one per cycle) -> card.

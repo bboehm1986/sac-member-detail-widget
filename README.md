@@ -10,6 +10,11 @@ does there. Headline leadership tiles live on
 fuller operational breakdowns live on
 [AE Member Enrollment Operational](../sac-member-operational-widget).
 
+
+## FLEX members are excluded (v1.3.0, 2026-10-05)
+
+`GLD_AE_Member_Enrollment` is shared with the FLEX dashboard (`sac-flex-member-widget`). FLEX members carry Wave "Group A"–"Group F", and this widget drops any row whose Wave starts with `Group `, next to its Portico exclusion. Blank-Wave rows are kept, so Traditional numbers don't change. In a headless check, output was byte-identical with and without FLEX rows injected. Gold's `Employer` column is also no longer NULL: it now holds "Name (Number)". Details: `../flex-member-enrollment-report/GOLD_CHANGES.md`.
+
 ## Important — deliberate exception to the rest of this suite
 
 This widget binds to `GLD_AE_Member_Enrollment` **directly** — row-level,
